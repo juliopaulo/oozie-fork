@@ -1,0 +1,86 @@
+
+
+
+<workflow-app name="sample-fork" xmlns="uri:oozie:workflow:0.1">
+
+	<start to="forkActions" />
+
+	<fork name="forkActions">
+		<path start="shell" />
+		<path start="pig" />
+		<path start="hive" />
+	</fork>
+
+	<action name="shell">
+		<shell xmlns="uri:oozie:shell-action:0.1">
+			<job-tracker>${jobTracker}</job-tracker>
+			<name-node>${nameNode}</name-node>
+			<configuration>
+				<property>
+					<name>mapred.job.queue.name</name>
+					<value>${queueName}</value>
+				</property>
+			</configuration>
+			<exec>script.sh</exec>
+			<argument>${url}</argument>
+			<argument>${output}</argument>
+			<argument>${hdfs_path}</argument>
+			<file>script.sh#script.sh</file>
+		</shell>
+		<ok to="joining" />
+		<error to="joining" />
+	</action>
+
+	<action name="pig">
+		<pig>
+			<job-tracker>${jobTracker}</job-tracker>
+			<name-node>${nameNode}</name-node>
+			<prepare>
+				<delete path="${nameNode}/user/${wf:user()}/oozie/fork1/output-data" />
+			</prepare>
+			<configuration>
+				<property>
+					<name>mapred.job.queue.name</name>
+					<value>${queueName}</value>
+				</property>
+				<property>
+					<name>mapred.compress.map.output</name>
+					<value>true</value>
+				</property>
+			</configuration>
+			<script>id.pig</script>
+			<param>INPUT=/user/${wf:user()}/oozie/fork1/input-data</param>
+			<param>OUTPUT=/user/${wf:user()}/oozie/fork1/output-data</param>
+		</pig>
+		<ok to="joining" />
+		<error to="joining" />
+	</action>
+
+	<action name="hive">
+		<hive xmlns="uri:oozie:hive-action:0.2">
+			<job-tracker>${jobTracker}</job-tracker>
+			<name-node>${nameNode}</name-node>
+			<prepare>
+				<delete path="${nameNode}/user/${wf:user()}/oozie/fork1/output-data/hive" />
+				<mkdir path="${nameNode}/user/${wf:user()}/oozie/fork1/output-data/hive" />
+			</prepare>
+			<job-xml>hive-site.xml</job-xml>
+			<configuration>
+				<property>
+					<name>mapred.job.queue.name</name>
+					<value>${queueName}</value>
+				</property>
+			</configuration>
+			<script>script.q</script>
+			<param>INPUT=/user/${wf:user()}/oozie/fork1/input-data/table</param>
+			<param>OUTPUT=/user/${wf:user()}/oozie/fork1/output-data/hive</param>
+		</hive>
+		<ok to="joining" />
+		<error to="joining" />
+	</action>
+
+	<join name="joining" to="done" />
+
+	<end name="done" />
+
+</workflow-app>
